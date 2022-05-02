@@ -1,31 +1,72 @@
-//Define the query and mutation functionality to work with the Mongoose models.
-//Hint: Use the functionality in the user-controller.js as a guide.
 
-const { User} = require('../models');
+const {AuthenticationError}=require ('apollo-server-express');
+const {signToken}=require ('../utils/auth');
+const {User, Book} = require('../models');
 
 const resolvers = {
     Query: {
-        user: async () => {
-            return Tech.find({});
+        user: async (parent, {username}) => {
+            return User.findOne({username}).populate('savedBooks');
           },
-          matchups: async (parent, { _id }) => {
-            const params = _id ? { _id } : {};
-            return Matchup.find(params);
+          savedBooks: async (parent, { username }) => {
+            const params = username ? {username} : {};
+            return Book.find(params).sort({createdAt: -1});
+          },
+          me: async (parent, args, context)=>{
+            if(context.user){
+              return user.findOne({_id: context.user_id}).populate('savedBooks');
+            }
+            throw new AuthenticationError('Must login to interact.');
           },
     },
     Mutation: {
-        createMatchup: async (parent, args) => {
-          const matchup = await Matchup.create(args);
-          return matchup;
+        addUser: async (parent,{username, email, password}) => {
+          const user = await User.create({username, email, password});
+          const token=signToken(user);
+          return {token, user};
         },
-        createVote: async (parent, { _id, techNum }) => {
-          const vote = await Matchup.findOneAndUpdate(
-            { _id },
-            { $inc: { [`tech${techNum}_votes`]: 1 } },
-            { new: true }
-          );
-          return vote;
+        login: async (parent, { email, password }) => {
+          const user = await User.findOne({email});
+          if(!user){
+            throw new AuthenticationError('No user found with this email');
+          }
+          const rightPswd=await user.isCorrectPassword(password);
+          if (!rightPswd){
+            throw new AuthenticationError('incorrect password or email')
+          }
+            const token =signToken(user);
+          return {token, user};
         },
-      },
-}
+        saveBook: async(
+          parent, {
+            bookId, title, authors, description, image, link
+          }, context
+        )=>{
+          if (context.user){
+            const book=await Book.create({
+              bookId, title, authors, description, image, link,
+            });
+            await User.findOneAndUpdate(
+              {_id: context.user._id},
+              {$addToSet: {savedBooks: book._id}}
+            );
+            return book;
+          }
+          throw new AuthenticationError('You must be logged in.');
+        },
+        removeBook: async (parent, {bookId}, context) =>{
+          if ( context.user){
+            const book =await Book.findOneAndDelete({
+              _id: bookId, bookAuthor: context.user.username,
+            });
+            await User.findOneAndUpdate(
+              {_id: context.user._id},
+              {$pull: {books: book._id}}
+            );
+            return book;
+          }
+          throw new AuthenticationError ('You must be logged in.');
+        },
+    },
+};
 module.exports = resolvers;
