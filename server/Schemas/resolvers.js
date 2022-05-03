@@ -14,7 +14,7 @@ const resolvers = {
           },
           me: async (parent, args, context)=>{
             if(context.user){
-              return user.findOne({_id: context.user_id}).populate('savedBooks');
+              return User.findOne({_id: context.user_id}).populate('savedBooks');
             }
             throw new AuthenticationError('Must login to interact.');
           },
@@ -30,40 +30,33 @@ const resolvers = {
           if(!user){
             throw new AuthenticationError('No user found with this email');
           }
-          const rightPswd=await user.isCorrectPassword(password);
-          if (!rightPswd){
+          const correctPw=await user.isCorrectPassword(password);
+          if (!correctPw){
             throw new AuthenticationError('incorrect password or email')
           }
             const token =signToken(user);
           return {token, user};
         },
         saveBook: async(
-          parent, {
-            bookId, title, authors, description, image, link
-          }, context
-        )=>{
+          parent, {input}, context) => {
           if (context.user){
-            const book=await Book.create({
-              bookId, title, authors, description, image, link,
-            });
-            await User.findOneAndUpdate(
+            const updateList=await User.findOneAndUpdate(
               {_id: context.user._id},
-              {$addToSet: {savedBooks: book._id}}
+              {$addToSet: {savedBooks: input}},
+              {new: true, runvalidators: true}
             );
-            return book;
+            return updateList;
           }
           throw new AuthenticationError('You must be logged in.');
         },
         removeBook: async (parent, {bookId}, context) =>{
           if ( context.user){
-            const book =await Book.findOneAndDelete({
-              _id: bookId, bookAuthor: context.user.username,
-            });
-            await User.findOneAndUpdate(
+            const updateListbook =await User.findOneAndUpdate(
               {_id: context.user._id},
-              {$pull: {books: book._id}}
+              {$pull: {savedBooks: {bookId: bookId}}},
+              {new: true}
             );
-            return book;
+            return updateList;
           }
           throw new AuthenticationError ('You must be logged in.');
         },
