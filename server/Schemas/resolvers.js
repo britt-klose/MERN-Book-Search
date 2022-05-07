@@ -1,27 +1,21 @@
 
 const {AuthenticationError}=require ('apollo-server-express');
 const {signToken}=require ('../utils/auth');
-const {User, Book} = require('../models');
+const {User} = require('../models');
 
 const resolvers = {
     Query: {
-        user: async (parent, {username}) => {
-            return User.findOne({username}).populate('savedBooks');
-          },
-          savedBooks: async (parent, { username }) => {
-            const params = username ? {username} : {};
-            return Book.find(params).sort({createdAt: -1});
-          },
           me: async (parent, args, context)=>{
             if(context.user){
-              return User.findOne({_id: context.user_id}).populate('savedBooks');
+              const userInfo= User.findOne({_id: context.user_id}).select('-__v -password');
+            return userInfo;
             }
             throw new AuthenticationError('Must login to interact.');
           },
     },
     Mutation: {
-        addUser: async (parent,{username, email, password}) => {
-          const user = await User.create({username, email, password});
+        addUser: async (parent, args) => {
+          const user = await User.create(args);
           const token=signToken(user);
           return {token, user};
         },
@@ -38,12 +32,12 @@ const resolvers = {
           return {token, user};
         },
         saveBook: async(
-          parent, {input}, context) => {
+          parent, {bookInput}, context) => {
           if (context.user){
-            const updateList=await User.findOneAndUpdate(
+            const updateList=await User.findByIdAndUpdate(
               {_id: context.user._id},
-              {$addToSet: {savedBooks: input}},
-              {new: true, runvalidators: true}
+              {$push: {savedBooks: bookInput}},
+              {new: true}
             );
             return updateList;
           }
@@ -51,9 +45,9 @@ const resolvers = {
         },
         removeBook: async (parent, {bookId}, context) =>{
           if ( context.user){
-            const updateListbook =await User.findOneAndUpdate(
+            const updateList =await User.findOneAndUpdate(
               {_id: context.user._id},
-              {$pull: {savedBooks: {bookId: bookId}}},
+              {$pull: {savedBooks: {bookId}}},
               {new: true}
             );
             return updateList;
