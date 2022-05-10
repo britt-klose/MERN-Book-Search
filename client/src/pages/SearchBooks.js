@@ -33,7 +33,7 @@ const SearchBooks = () => {
 
     try {
       // const response = await searchGoogleBooks(searchInput);
-      const reponse = await fetch(
+      const response = await fetch(
       `https://www.googleapis.com/books/v1/volumes?q=${searchInput}`
       );
 
