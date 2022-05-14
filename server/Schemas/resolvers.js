@@ -7,8 +7,8 @@ const resolvers = {
     Query: {
           me: async (parent, args, context)=>{
             if(context.user){
-              const userInfo= User.findOne({_id: context.user_id}).select('-__v -password');
-            return userInfo;
+            const userData= User.findOne({_id: context.user_id}).select('-__v -password');
+            return userData;
             }
             throw new AuthenticationError('Must login to interact.');
           },
@@ -17,6 +17,7 @@ const resolvers = {
         addUser: async (parent, args) => {
           const user = await User.create(args);
           const token=signToken(user);
+
           return {token, user};
         },
         login: async (parent, { email, password }) => {
@@ -34,23 +35,23 @@ const resolvers = {
         saveBook: async(
           parent, {bookInput}, context) => {
           if (context.user){
-            const updateList=await User.findByIdAndUpdate(
+            const updatedUser=await User.findByIdAndUpdate(
               {_id: context.user._id},
               {$push: {savedBooks: bookInput}},
               {new: true}
             );
-            return updateList;
+            return updatedUser;
           }
           throw new AuthenticationError('You must be logged in.');
         },
         removeBook: async (parent, {bookId}, context) =>{
           if ( context.user){
-            const updateList =await User.findOneAndUpdate(
+            const updatedUser =await User.findOneAndUpdate(
               {_id: context.user._id},
               {$pull: {savedBooks: {bookId}}},
               {new: true}
             );
-            return updateList;
+            return updatedUser;
           }
           throw new AuthenticationError ('You must be logged in.');
         },
