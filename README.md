@@ -29,7 +29,9 @@ To install this application go through the following steps.
 ## Usage
 With the book search engine application Users can login, signup, search up books by title, save books to their profile, view saved books and delete them, and of course logout! Feel free to test out the queries and mutations yourself on GraphQL! You can also view the following images and/or deployed link to check out the functional app!
 
-![alt text](images/preview.png) 
+![alt text](images/searchbook.jpeg) 
+![alt text](images/signup.jpeg) 
+
 Deployed: 
 
 
