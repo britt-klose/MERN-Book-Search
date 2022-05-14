@@ -35,10 +35,10 @@ mutation saveBook($bookInput: BookInput!){
         email
         savedBooks{
             bookId
-            title
             authors
-            description
             image
+            description
+            title
             link
         }
     }
